@@ -119,8 +119,8 @@ void keyboard_routine(){
 
 void clock_routine (){
 	++zeos_ticks;
-	update_sched_data_rr();
 	zeos_show_clock();
+        schedule();
 }
 void inner_task_switch(union task_union *new){
 
@@ -134,6 +134,7 @@ void inner_task_switch(union task_union *new){
 	);	
 	current()->ebp_ret = (unsigned int *)ebp;
 	tss.esp0 = (DWord)t->ebp_ret;
+	t->state = 1;
 	__asm__(
 	"popl %ebp;"
 	"ret"
@@ -147,6 +148,7 @@ void task_switch(union task_union *new){
 	"pushl %esi;"
 	"pushl %edi"
   	);
+	current()->state = 0;
 	inner_task_switch(new);
 	__asm__(
 	"popl %edi;"
