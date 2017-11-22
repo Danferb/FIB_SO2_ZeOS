@@ -27,18 +27,9 @@ int write (int fd, char *buffer, int size){
 }
 
 void perror(){
-	if(errno == 38){
-		char buffer[] = {'E','N','O','S','Y','S'};
-		write(1, buffer, strlen(buffer));	
-	}
-	else if(errno == 9){
-		char buffer[6] = {'E','B','A','D','F','\0'};
-		write(1, buffer, strlen(buffer));	
-	}
-	else if(errno == 13){
-		char buffer[] = {'E','A','C','C','E','S'};
-		write(1, buffer, strlen(buffer));	
-	}
+	char buffer[256];
+	itoa(errno, buffer);
+	write(1, buffer, strlen(buffer));
 }
 
 int add(int par1, int par2){
@@ -140,6 +131,11 @@ int fork(void){
 	:"=a"(pid)
 	:"a"(pid)	
 	);
+	if(pid < 0){
+		errno = -pid;
+		return -1;	
+	}
+	errno = 0;
 	return pid;
 }
 
@@ -148,4 +144,44 @@ void exit(void){
 	"movl $1, %eax;"
 	"int $0x80"	
 	);
+}
+
+int yield(){
+	int result;
+	__asm__ __volatile__ ( 
+		"int $0x80"
+		:"=a" (result)
+		:"a" (13)
+	);
+	return result;
+}
+int get_stats(int pid, struct stats *st){
+	int result;
+	__asm__ __volatile__ (
+		"int $0x80"
+		:"=a" (result)
+		: "a" (35), "b" (pid), "c" (st)
+	);
+	if (result < 0){
+		errno = -result;
+		return -1;
+	}
+	errno = 0;
+	return result;
+}
+int clone(void (*function) (void), void *stack){
+	int result;
+	__asm__ __volatile__ (
+	"movl 	$19, %%eax;"
+	"int	$0x80"
+	:"=a"(result) /*output*/
+	:"a"(result), "b"(function), "c"(stack)/*input*/
+	);
+	if (result < 0){
+		errno = -result;
+		return -1;	
+	}
+	errno = 0;
+	return result; 
+	
 }

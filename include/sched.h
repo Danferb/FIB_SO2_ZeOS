@@ -20,7 +20,7 @@ struct task_struct {
   page_table_entry * dir_pages_baseAddr;
   struct list_head list;
   unsigned int * ebp_ret;
-  int state; // 0 = not running 1 = running
+  enum state_t state; // 0 = not running 1 = running
   int quantum;
   struct stats st;
   //punter a anterior i a seguent amb list_head

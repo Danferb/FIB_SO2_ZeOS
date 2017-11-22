@@ -123,22 +123,28 @@ void clock_routine (){
         schedule();
 }
 void inner_task_switch(union task_union *new){
-
-	struct task_struct *t = (struct task_struct *) new;
-	tss.ss0 = (DWord) &new->stack[KERNEL_STACK_SIZE];
-	set_cr3(t->dir_pages_baseAddr);
-	unsigned int ebp;
-	__asm__ __volatile__(
-	"movl %%ebp, %%eax"
-	:"=a"(ebp)
-	);	
-	current()->ebp_ret = (unsigned int *)ebp;
-	tss.esp0 = (DWord)t->ebp_ret;
-	t->state = 1;
-	__asm__(
-	"popl %ebp;"
-	"ret"
+	page_table_entry *new_DIR = get_DIR(&new->task);
+  	tss.esp0=(int)&(new->stack[KERNEL_STACK_SIZE]);
+ 	set_cr3(new_DIR);
+  	__asm__ __volatile__ (
+  		"movl %%ebp, %0"
+		: "=g" (current()->ebp_ret)
+	 );
+  	__asm__ __volatile__ (
+  		"movl %0, %%esp"
+		:
+		: "g" (new->task.ebp_ret));
+  	__asm__ __volatile__(
+		"popl %%ebp"
+		:
+		:
+	 );
+  	__asm__ __volatile__ (
+  		"ret"
+		:	
+		:
 	);
+	
  
 }
 
@@ -148,7 +154,6 @@ void task_switch(union task_union *new){
 	"pushl %esi;"
 	"pushl %edi"
   	);
-	current()->state = 0;
 	inner_task_switch(new);
 	__asm__(
 	"popl %edi;"
